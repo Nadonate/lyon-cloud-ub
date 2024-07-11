@@ -1,2 +1,3 @@
 # lyon-cloud-ub
-docker stack for UBVM
+
+Docker statck for UBVM - for troubleshooting and review
