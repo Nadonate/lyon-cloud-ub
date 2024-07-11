@@ -1,0 +1,25 @@
+services:
+  # MariaDB - MySQL Database
+  # After starting container for first time dexec and mysqladmin -u root password <password>
+  mariadb:
+    container_name: mariadb
+    image: lscr.io/linuxserver/mariadb:10.11.6
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    #profiles: ["core", "all"]
+    networks:
+      - t3_proxy
+      - socket_proxy
+    ports:
+      - "3306:3306"
+    volumes:
+      # - $USERDIR/appdata/mariadb:/var/lib/mysql
+      - $USERDIR/appdata/mariadb/data:/config
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      GUID: $GUID
+      #FILE__MYSQL_ROOT_PASSWORD: /run/secrets/mysql_root_password # Note FILE__ (double underscore) - Issue #127
+    secrets:
+      - mysql_root_password
