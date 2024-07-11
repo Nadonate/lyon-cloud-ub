@@ -1,0 +1,67 @@
+services:
+  # Nginx - Web Server
+  nginx:
+    container_name: nginx
+    image: nginx:1.24 # 1.20 updated 4/19/2024 # 1.18 Updated 8/9/2021
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    #profiles: ["core", "all"]
+    networks:
+      - t3_proxy
+      - socket_proxy
+    depends_on:
+      - php7
+      - redis
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - $USERDIR/logs/$HOSTNAME/nginx:/var/log/nginx
+      - $USERDIR/appdata/nginx:/etc/nginx
+      - $USERDIR/appdata/sites/wordpress/html:/var/www/html/wordpress
+      - $USERDIR/logs/$HOSTNAME/lyon-cloud-ub/wordpress/debug.log:/var/www/html/wordpress/wp-content/debug.log
+      #- $USERDIR/appdata/sites/shb/beta:/var/www/html/beta
+      #- $USERDIR/appdata/sites/khub/html:/var/www/html/khub
+      #- $USERDIR/appdata/sites/dash/html:/var/www/html/dash
+    secrets:
+      - basic_auth_credentials
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers GMG (Wordpress) Auth
+      - "traefik.http.routers.nginx-gmg-auth-rtr.entrypoints=websecure"
+      - "traefik.http.routers.nginx-gmg-auth-rtr.rule=Host(`www.wordpress.$DOMAINNAME_1`) && Path(`/wp-login.php`)" # crowdsec
+      - "traefik.http.routers.nginx-gmg-auth-rtr.priority=100"
+      # HTTP Routers GMG (Wordpress) Bypass
+      - "traefik.http.routers.nginx-gmg-rtr.entrypoints=websecure"
+      - "traefik.http.routers.nginx-gmg-rtr.rule=Host(`wordpress.$DOMAINNAME_1`) || Host(`www.wordpress.$DOMAINNAME_1`)" # no crowdsec
+      - "traefik.http.routers.nginx-gmg-rtr.priority=99"
+      # HTTP Routers SHB Beta (WordPress)
+      #- "traefik.http.routers.nginx-shb-beta-rtr.entrypoints=websecure"
+      #- "traefik.http.routers.nginx-shb-beta-rtr.rule=Host(`beta.$DOMAINNAME_WS`)"
+      # HTTP Routers DASH (non-WordPress)
+      #- "traefik.http.routers.nginx-dash-rtr.entrypoints=websecure"
+      #- "traefik.http.routers.nginx-dash-rtr.rule=Host(`dash.$DOMAINNAME_WS`)" # crowdsec
+      # HTTP Routers KHUB (non-WordPress)
+      #- "traefik.http.routers.nginx-khub-rtr.entrypoints=websecure"
+      #- "traefik.http.routers.nginx-khub-rtr.rule=Host(`$DOMAINNAME_KHUB`) || Host(`www.$DOMAINNAME_KHUB`)"
+      # Redirect gmg non-www to www middleware
+      - "traefik.http.middlewares.gmg-redirect.redirectregex.regex=^https?://wordpress.$DOMAINNAME_1/(.*)"
+      - "traefik.http.middlewares.gmg-redirect.redirectregex.replacement=https://www.wordpress.$DOMAINNAME_1/$${1}"
+      - "traefik.http.middlewares.gmg-redirect.redirectregex.permanent=true"
+      # Redirect khub non-www to www middleware
+      #- "traefik.http.middlewares.khub-redirect.redirectregex.regex=^https?://$DOMAINNAME_KHUB/(.*)"
+      #- "traefik.http.middlewares.khub-redirect.redirectregex.replacement=https://www.$DOMAINNAME_KHUB/$${1}"
+      #- "traefik.http.middlewares.khub-redirect.redirectregex.permanent=true"
+      # Middlewares
+      #- "traefik.http.routers.nginx-khub-rtr.middlewares=khub-redirect,chain-no-auth@file"
+      - "traefik.http.routers.nginx-gmg-rtr.middlewares=shb-redirect,chain-no-auth-wp@file" # no crowdsec
+      - "traefik.http.routers.nginx-gmg-auth-rtr.middlewares=shb-redirect,chain-no-auth-crowdsec-wp@file" # crowdsec
+      #- "traefik.http.routers.nginx-dash-rtr.middlewares=chain-oauth@file"
+      #- "traefik.http.routers.nginx-shb-beta-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.nginx-gmg-rtr.service=nginx-svc"
+      - "traefik.http.routers.nginx-gmg-auth-rtr.service=nginx-svc"
+      #- "traefik.http.routers.nginx-khub-rtr.service=nginx-svc"
+      #- "traefik.http.routers.nginx-dash-rtr.service=nginx-svc"
+      #- "traefik.http.routers.nginx-shb-beta-rtr.service=nginx-svc"
+      - "traefik.http.services.nginx-svc.loadbalancer.server.port=80"
