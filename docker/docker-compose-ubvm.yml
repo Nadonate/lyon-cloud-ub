@@ -1,0 +1,40 @@
+########################### NETWORKS
+networks:
+  default:
+    driver: bridge
+  socket_proxy:
+    name: socket_proxy
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.50.0/24
+  t3_proxy:
+    name: t3_proxy
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.49.0/24
+
+########################### SECRETS
+secrets:
+  basic_auth_credentials:
+    file: $USERDIR/secrets/basic_auth_credentials
+  cf_dns_api_token:
+    file: $USERDIR/secrets/cf_dns_api_token
+  mysql_root_password:
+    file: $USERDIR/secrets/mysql_root_password
+
+include:
+  ########################### SERVICES
+  # PREFIX ubvm = Ubuntu Virtual Machine
+  # HOSTNAME=lyon-cloud-ub - defined in .env
+
+  # CORE
+  - compose/$HOSTNAME/socket-proxy.yml
+  - compose/$HOSTNAME/portainer.yml
+  #- compose/$HOSTNAME/dozzle.yml
+  - compose/$HOSTNAME/traefik.yml
+  - compose/$HOSTNAME/mariadb.yml
+  - compose/$HOSTNAME/php7.yml
+  - compose/$HOSTNAME/nginx.yml
+  - compose/$HOSTNAME/redis.yml
